@@ -30,11 +30,18 @@ class Sudoku extends StatefulWidget {
 }
 
 class _SudokuState extends State<Sudoku> {
+  final puzzleNotifier = PuzzleNotifier(null);
+  final listNotifier = ListNotifier();
+
+  @override
+  void initState() {
+    listNotifier.generateMatrix(4);
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final puzzleNotifier = PuzzleNotifier(null);
-    final listNotifier = ListNotifier();
 
     return SafeArea(
       child: Scaffold(
@@ -77,7 +84,7 @@ class _SudokuState extends State<Sudoku> {
   }
 }
 
-class _SquartList extends StatelessWidget {
+class _SquartList extends StatefulWidget {
   const _SquartList({
     super.key,
     required this.puzzleNotifier,
@@ -85,6 +92,19 @@ class _SquartList extends StatelessWidget {
   });
   final PuzzleNotifier puzzleNotifier;
   final ListNotifier listNotifier;
+
+  @override
+  State<_SquartList> createState() => _SquartListState();
+}
+
+class _SquartListState extends State<_SquartList> {
+  @override
+  void initState() {
+    final availablePositions = widget.listNotifier
+        .generateAvailablePosition(widget.listNotifier.zeroPosition);
+    widget.puzzleNotifier.availableItems = availablePositions;
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,19 +115,20 @@ class _SquartList extends StatelessWidget {
       child: ListenableBuilder(
         builder: (context, child) {
           List<Widget> childrenRow = [];
-          for (int row = 0; row < listNotifier.matrix.length; row++) {
+          for (int row = 0; row < widget.listNotifier.matrix.length; row++) {
             List<Widget> childrenCol = [];
-            for (int col = 0; col < listNotifier.matrix[row].length; col++) {
-              final item = listNotifier.matrix[row][col];  
+            for (int col = 0;
+                col < widget.listNotifier.matrix[row].length;
+                col++) {
               childrenCol.add(Container(
                 padding: const EdgeInsets.all(3),
                 width: size.width * .2,
                 height: size.width * .2,
-                child: (item != 0) ? _ItemPuzzle(
-                  listNotifier: listNotifier,
+                child: _ItemPuzzle(
+                  listNotifier: widget.listNotifier,
                   position: [row, col],
-                  puzzleNotifier: puzzleNotifier,
-                ) : const SizedBox(),
+                  puzzleNotifier: widget.puzzleNotifier,
+                ),
               ));
             }
             childrenRow.add(Row(
@@ -119,7 +140,7 @@ class _SquartList extends StatelessWidget {
             children: childrenRow,
           );
         },
-        listenable: listNotifier,
+        listenable: widget.listNotifier,
       ),
     );
   }
@@ -144,15 +165,15 @@ class _ItemPuzzleState extends State<_ItemPuzzle> {
   Color colorCard = Colors.blue;
   late final PuzzleNotifier puzzleNotifier;
   late final ListNotifier listNotifier;
-  late final int row;
-  late final int col;
+  late final int rowCurrentItem;
+  late final int colCurrentItem;
   late final int item;
 
   @override
   void initState() {
-    row = widget.position[0];
-    col = widget.position[1];
-    item = widget.listNotifier.matrix[row][col];
+    rowCurrentItem = widget.position[0];
+    colCurrentItem = widget.position[1];
+    item = widget.listNotifier.matrix[rowCurrentItem][colCurrentItem];
     puzzleNotifier = widget.puzzleNotifier;
     listNotifier = widget.listNotifier;
     super.initState();
@@ -161,15 +182,21 @@ class _ItemPuzzleState extends State<_ItemPuzzle> {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
+
     return GestureDetector(
       onTap: () {
         if (puzzleNotifier.item == null) {
-          _markAvailablePosition();
-        } else if (puzzleNotifier.item == item) {
-          puzzleNotifier.availableItems = [];
+          if (puzzleNotifier.availableItems.contains(item)) {
+            puzzleNotifier.item = item;
+          }
+          return;
+        }
+        if (item == 0) {
+          _moveItem();
+          return;
+        }
+        if (puzzleNotifier.item == item) {
           puzzleNotifier.item = null;
-        } else {
-         _moveItem();
         }
       },
       child: ListenableBuilder(
@@ -178,13 +205,9 @@ class _ItemPuzzleState extends State<_ItemPuzzle> {
             return Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                color: puzzleNotifier.item == item
-                    ? Colors.red
-                    : puzzleNotifier.availableItems.contains(item)
-                        ? Colors.green
-                        : Colors.blue,
+                color: _getColorCard(),
               ),
-              child: child,
+              child: item == 0 ? const SizedBox() : child,
             );
           },
           child: Center(
@@ -198,34 +221,32 @@ class _ItemPuzzleState extends State<_ItemPuzzle> {
     );
   }
 
-  void _markAvailablePosition() {
-    final List directions = [
-      [-1, 0],
-      [0, -1],
-      [1, 0],
-      [0, 1]
-    ];
-    for (var direction in directions) {
-      final int rowDirection = (row + direction[0]).toInt();
-      final int colDirection = (col + direction[1]).toInt();
-      if (rowDirection >= 0 &&
-          rowDirection < listNotifier.matrix.length &&
-          colDirection >= 0 &&
-          colDirection < listNotifier.matrix[rowDirection].length) {
-        int value = listNotifier.matrix[rowDirection][colDirection];
-        puzzleNotifier.availableItems.add(value);
-      }
-    }
-    puzzleNotifier.item = item;
-  }
-  
   void _moveItem() {
-    if (puzzleNotifier.availableItems.contains(item)) {
-      listNotifier.matrix[row][col] = puzzleNotifier.item!;
-      listNotifier.matrix[puzzleNotifier.item! - 1][col] = item;
-      puzzleNotifier.availableItems.remove(item);
-      puzzleNotifier.item = null;
+    // List<List<int>> newMatrix = listNotifier.matrix;
+
+    // newMatrix[rowCurrentItem][colCurrentItem] = item;
+
+    // newMatrix[rowZero][colZero] = item;
+    // listNotifier.matrix = newMatrix;
+    // listNotifier.zeroPosition = [rowCurrentItem, colCurrentItem];
+    // puzzleNotifier.item = null;
+  }
+
+  Color _getColorCard() {
+    if (puzzleNotifier.item == item) {
+      return Colors.red;
     }
+    if (puzzleNotifier.availableItems.contains(item)) {
+      return Colors.green;
+    }
+    if (puzzleNotifier.item != null && item == 0) {
+      return Colors.grey;
+    }
+    if (item == 0) {
+      return Colors.transparent;
+    }
+
+    return Colors.blue;
   }
 }
 
@@ -244,12 +265,8 @@ class PuzzleNotifier extends ChangeNotifier {
 
 class ListNotifier extends ChangeNotifier {
   ListNotifier();
-  List<List<int>> _matrix = List<List<int>>.generate(4, (indexRow) {
-    return List<int>.generate(4, (indexCol) {
-      return indexRow * 4 + indexCol + 1;
-    });
-  });
-
+  List<List<int>> _matrix = [];
+  List<int> _zeroPosition = [];
 
   set matrix(List<List<int>> value) {
     _matrix = value;
@@ -257,4 +274,49 @@ class ListNotifier extends ChangeNotifier {
   }
 
   List<List<int>> get matrix => _matrix;
+
+  set zeroPosition(List<int> value) {
+    _zeroPosition = value;
+    notifyListeners();
+  }
+
+  List<int> get zeroPosition => _zeroPosition;
+
+  List<int> generateAvailablePosition(List<int> zeroPosition) {
+    List<List<int>> directions = [
+      [-1, 0],
+      [0, -1],
+      [1, 0],
+      [0, 1]
+    ];
+    List<int> availablePositions = [];
+    for (var direction in directions) {
+      final int rowDirection = (zeroPosition[0] + direction[0]).toInt();
+      final int colDirection = (zeroPosition[1] + direction[1]).toInt();
+      if (rowDirection >= 0 &&
+          rowDirection < matrix.length &&
+          colDirection >= 0 &&
+          colDirection < matrix[rowDirection].length) {
+        int value = matrix[rowDirection][colDirection];
+        availablePositions.add(value);
+      }
+    }
+    return availablePositions;
+  }
+
+  void generateMatrix(int size) {
+    int maxNumber = size * size;
+    List<int> numbers = List<int>.generate(maxNumber, (index) => index);
+    numbers.shuffle();
+    for (int i = 0; i < size; i++) {
+      List<int> row = [];
+      for (int j = 0; j < size; j++) {
+        if (numbers[i * size + j] == 0) {
+          _zeroPosition = [i, j];
+        }
+        row.add(numbers[i * size + j]);
+      }
+      matrix.add(row);
+    }
+  }
 }
