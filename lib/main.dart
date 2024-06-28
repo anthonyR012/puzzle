@@ -173,9 +173,9 @@ class _ItemPuzzleState extends State<_ItemPuzzle> {
   void initState() {
     rowCurrentItem = widget.position[0];
     colCurrentItem = widget.position[1];
-    item = widget.listNotifier.matrix[rowCurrentItem][colCurrentItem];
     puzzleNotifier = widget.puzzleNotifier;
     listNotifier = widget.listNotifier;
+    item = listNotifier.matrix[rowCurrentItem][colCurrentItem];
     super.initState();
   }
 
@@ -185,9 +185,11 @@ class _ItemPuzzleState extends State<_ItemPuzzle> {
 
     return GestureDetector(
       onTap: () {
-        if (puzzleNotifier.item == null) {
+        final itemSelected =
+            puzzleNotifier.getSelectedItem(listNotifier.matrix);
+        if (itemSelected == null) {
           if (puzzleNotifier.availableItems.contains(item)) {
-            puzzleNotifier.item = item;
+            puzzleNotifier.itemPosition = widget.position;
           }
           return;
         }
@@ -195,8 +197,8 @@ class _ItemPuzzleState extends State<_ItemPuzzle> {
           _moveItem();
           return;
         }
-        if (puzzleNotifier.item == item) {
-          puzzleNotifier.item = null;
+        if (itemSelected == item) {
+          puzzleNotifier.itemPosition = null;
         }
       },
       child: ListenableBuilder(
@@ -233,13 +235,15 @@ class _ItemPuzzleState extends State<_ItemPuzzle> {
   }
 
   Color _getColorCard() {
-    if (puzzleNotifier.item == item) {
+    final int? itemSelected = puzzleNotifier.getSelectedItem(listNotifier.matrix);
+
+    if (itemSelected == item) {
       return Colors.red;
     }
     if (puzzleNotifier.availableItems.contains(item)) {
       return Colors.green;
     }
-    if (puzzleNotifier.item != null && item == 0) {
+    if (itemSelected != null && item == 0) {
       return Colors.grey;
     }
     if (item == 0) {
@@ -251,16 +255,24 @@ class _ItemPuzzleState extends State<_ItemPuzzle> {
 }
 
 class PuzzleNotifier extends ChangeNotifier {
-  PuzzleNotifier(this._item);
+  PuzzleNotifier(this._itemPosition);
   List<int> availableItems = [];
-  int? _item;
+  List<int>? _itemPosition;
 
-  set item(int? value) {
-    _item = value;
+  set itemPosition(List<int>? value) {
+    _itemPosition = value;
     notifyListeners();
   }
 
-  int? get item => _item;
+  List<int>? get itemPosition => _itemPosition;
+
+  int? getSelectedItem(List<List<int>> matrix) {
+    int? itemSelected = -1;
+    if (itemPosition != null) {
+      itemSelected = matrix[itemPosition![0]][itemPosition![1]];
+    }
+    return itemSelected;
+  }
 }
 
 class ListNotifier extends ChangeNotifier {
