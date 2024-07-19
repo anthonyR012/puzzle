@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:test_ui/platform_channel_test.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const Sudoku(),
+      home: HomeScreen(),
     );
   }
 }
@@ -182,7 +183,6 @@ class _ItemPuzzleState extends State<_ItemPuzzle> {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-
     return GestureDetector(
       onTap: () {
         final itemSelected =
